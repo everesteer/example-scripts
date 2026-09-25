@@ -1,0 +1,65 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.eiq-agent/
+.ipynb_checkpoints/
+
+# Datasets + trained models: don't commit these
+*.parquet
+*.pkl
+himalayas/baseline_predictions.csv
+
+# Secrets / local env: never commit your API key or CF service token
+.env
+*.env
+
+# macOS
+.DS_Store
+
+# ---------------------------------------------------------------------
+# Local working scratch
+# ---------------------------------------------------------------------
+# This repo is small, but a working clone accumulates hundreds of MB beside
+# it. One bulk stage once captured a scratch file holding 32 AWS presigned
+# URLs (X-Amz-Credential / X-Amz-Signature) and was stopped only by the
+# pre-commit hook. This repo goes PUBLIC. The hook is the second line of
+# defence, not the only one.
+
+# Hosted-job payloads and dataset scratch: presigned URLs live here
+data/
+serverless_artifacts/
+
+# Research outputs: experiment write-ups, candidate models, prediction CSVs
+# (13-14 MB each, over the hook's 10 MB ceiling)
+experiments/
+models/
+himalayas/serverless_artifacts/
+
+# Predictions / submissions produced by the starters
+*_predictions.parquet
+*-submission.csv
+hosted_predictions.parquet
+hosted_model.pkl
+
+# Session transcripts and agent tooling state
+.gstack/
+conversation-log.md
+*-transcript.md
+*-transcript.txt
+*-give-me-a-tour-*.txt
+
+# A clone of this repo checked out inside itself
+/example-scripts/
+
+# himalayas/ ships exactly the starters + notebooks below; everything else in
+# there is local scratch (diagnose*.py, *.err/.out, fresh_*.json, payload_*,
+# serverless artifacts). An allowlist is used deliberately rather than a
+# pattern list: this repo goes PUBLIC, and a new scratch filename must fail
+# closed rather than be silently committable.
+himalayas/*
+!himalayas/*.ipynb
+!himalayas/futures_starter.py
+!himalayas/futures_starter_hosted.py
+!himalayas/example_predictions.csv

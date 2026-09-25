@@ -1,0 +1,38 @@
+# EverestQuant shared ruff config: copy into each repo root (or merge into pyproject.toml under [tool.ruff]).
+# Replaces black + isort + flake8. Run: `ruff format .` and `ruff check --fix .`
+#
+# RETROFIT BASELINE (2026-06): rule set chosen so existing code passes CI.
+# Ratchet plan: re-enable B (bugbear), SIM (simplify), RUF gradually, and drop
+# ignores below as violations get fixed. Don't add new ignores without a comment.
+
+target-version = "py311"
+line-length = 100
+extend-exclude = ["*.ipynb"]  # don't churn starter notebooks
+
+[lint]
+select = [
+    "E",   # pycodestyle errors
+    "F",   # pyflakes
+    "I",   # isort (import sorting)
+    "UP",  # pyupgrade (modern syntax)
+]
+ignore = [
+    "E501",  # line length, handled by the formatter
+    # retrofit ignores (pre-existing violations; ratchet down over time):
+    "E402",  # imports not at top (deliberate sys.path setup in scripts)
+    "E722",  # bare except
+    "E731",  # lambda assignment
+    "E741",  # ambiguous variable names
+    "F601",  # membership-style comparisons
+    "F841",  # unused variables
+    "UP028", # yield in for loop
+    "UP031", # %-format strings
+]
+
+[lint.per-file-ignores]
+# Foreign entries were dropped here: the source repo's per-file-ignores named
+# paths internal to a private, money-bearing repo, and this repo is public.
+"__init__.py" = ["F401"]                  # re-export pattern
+
+[format]
+quote-style = "double"
