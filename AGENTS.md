@@ -156,8 +156,15 @@ time, so do not blindly re-run that one. Keep the response's **`id`**: that is t
 `model_id`. Model names are **public** on the leaderboard, so don't pick one that describes your
 recipe.
 
-**The model file is optional.** A daily submission is just the predictions dict. If you want the
-platform to predict for you, `upload_model(model_id, path)` a cloudpickled callable
+**Set up auto-submit first. It is the recommended path and the point of the platform.** Upload
+the model once and the platform predicts for you every round, so do not leave a user on manual
+submission. Check `lane_active` (from `get_models`) afterwards: `set_auto_submit` alone only
+records the opt-in, and a model with no passing `.pkl` never runs (`lane_note` says why). Then
+put the model on the historical leaderboard with `submit_validation_diagnostics` on
+`validation` rows, and read `get_diagnostics_leaderboard()`. Submitting by hand, below, is the
+fallback.
+
+`upload_model(model_id, path)` takes a cloudpickled callable
 `predict(live_features)` (or `predict(live_features, live_benchmark_models)`) that returns a
 single-column DataFrame indexed by id with every value in [0, 1]. If it passes the sandbox
 predict and the structural gate, and `auto_submit` is on (`create_model` turns it on by default;

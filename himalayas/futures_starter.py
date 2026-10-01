@@ -18,8 +18,8 @@ to the practice board if not.
 
 It produces:
   - baseline_predictions.parquet (+ .csv): id + prediction for the scored split
-  - baseline_model.pkl:          the model as a cloudpickled predict(). OPTIONAL:
-                                  a daily submission is just the predictions
+  - baseline_model.pkl:          the model as a cloudpickled predict(). Upload it
+                                  and enable auto-submit (section 8)
 
 Usage:
     pip install "everestapi>=0.3.38" lightgbm scikit-learn pandas pyarrow cloudpickle
@@ -281,15 +281,14 @@ print(f"\nPredicted {len(predictions):,} rows; first id: {predictions.index[0]!r
 
 
 # =====================================================================
-# 8. Pickle the model (OPTIONAL)
+# 8. Pickle the model, for auto-submit
 # =====================================================================
-# A daily submission is just the predictions. The pickle only matters if you
-# want the platform to predict for you: upload_model(model_id, path) with a
+# Auto-submit is the recommended path: upload_model(model_id, path) with a
 # cloudpickled predict(live_features) that passes the sandbox predict and the
 # structural gate, with auto_submit on (create_model turns it on by default),
 # and the platform runs it and submits shortly after each round opens. Check
-# get_started's auto_run field to confirm the hosted run is active; a submission
-# you make yourself always wins over it.
+# get_models' lane_active field (and lane_note) to confirm the hosted run is active;
+# a submission you make yourself always wins over it.
 #
 # If you do upload one: return a SINGLE-COLUMN DataFrame indexed by id with
 # every value in [0, 1], use cloudpickle.dump (never pickle.dump), and select

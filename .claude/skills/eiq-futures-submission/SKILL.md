@@ -15,8 +15,8 @@ description: >
 Get a model live on **The Himalayas**, Everesteer's daily futures prediction tournament, and
 keep it submitting each round. There is one round each weekday, Monday to Friday. Each round
 you predict every row of the `live` split and post those predictions with
-`submit_futures_predictions`. A daily submission is just a predictions dict; uploading a model
-file is optional.
+`submit_futures_predictions`, or, better, upload the model once and enable auto-submit so the
+platform does it for you (see the auto-submit section below).
 
 You are a **participant**. Everything here uses the public `everestapi` SDK (floor
 `everestapi>=0.3.38`) plus the Everesteer MCP server. There is no internal platform repo and no
@@ -205,9 +205,10 @@ of 1000 requests/min, and no daily cap on submission count.
 > Use `submit_futures_predictions` for Himalayas. `submit_predictions` is the equities tool
 > (a `ticker`/`score` list, different shape and tournament).
 
-## (Optional) Hosted model file
+## Auto-submit: upload the model file (recommended)
 
-The pickle is **optional**. If you want the platform to run your model for you:
+Set this up first: it is the point of the platform, and the manual loop above is the
+fallback. The platform runs your model for you every round:
 
 ```python
 client.upload_model(model_id=MODEL_ID, file_path="model.pkl")
@@ -222,8 +223,11 @@ The platform runs it and submits shortly after each round opens only when **all*
 - it passed the sandbox predict and the structural gate,
 - `auto_submit` is on (`create_model` enables it by default; `set_auto_submit` toggles it).
 
-**Check that the auto-run is active before relying on it:** `get_started` reports it in
-`auto_run`. Either way, **a submission you make yourself always wins**: the hosted run never
+**Check that the auto-run is active before relying on it:** `get_models` reports `lane_active`
+per model (`lane_note` says why not), and `get_started` reports `auto_run`. `auto_submit` on its
+own only records the opt-in. Then put the model on the historical leaderboard: predict
+`validation` with the same callable and call `submit_validation_diagnostics`, then
+`get_diagnostics_leaderboard()`. Either way, **a submission you make yourself always wins**: the hosted run never
 overwrites it. `.pkl` files are code on load: only upload artifacts you built yourself.
 
 ## 7-8. Verify and monitor
