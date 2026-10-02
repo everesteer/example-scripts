@@ -284,13 +284,13 @@ holdout = train[train["exped"].isin(holdout_expeds)].dropna(subset=[TARGET])
 m = MyEverestModel().fit(fit_rows[feats], fit_rows[TARGET])
 holdout = holdout.assign(prediction=m.predict(holdout[feats]))
 
-# FIT is computed within each exped, then averaged. Don't use EverestAPI.evaluate for
-# this: it pools every row into one correlation, which is not the per-exped FIT the
-# board scores.
-fit = holdout.groupby("exped")[["prediction", TARGET]].apply(
+# Per-exped Spearman, then averaged: a quick proxy for FIT (FIT itself is a covariance,
+# everestapi.scoring.fit20). Don't use EverestAPI.evaluate for this: it pools every row
+# into one correlation, which is not a per-exped number like the one the board scores.
+corr = holdout.groupby("exped")[["prediction", TARGET]].apply(
     lambda g: g["prediction"].rank().corr(g[TARGET].rank())
 ).dropna()
-print(f"FIT {fit.mean():+.4f} | std {fit.std():.4f} | {(fit > 0).mean():.0%} of expeds positive")
+print(f"Spearman {corr.mean():+.4f} | std {corr.std():.4f} | {(corr > 0).mean():.0%} of expeds positive")
 ```
 
 A healthy futures model usually lands at a **small positive** FIT, on the order of a few

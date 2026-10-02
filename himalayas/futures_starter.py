@@ -237,19 +237,20 @@ model.fit(features_matrix(fit_df, feat_cols), fit_df[target_col])
 # =====================================================================
 # 6. Evaluate on the embargoed holdout
 # =====================================================================
-# FIT is the rank correlation between predictions and the target, computed
-# within each exped. Pearson on ranks is Spearman.
+# Spearman rank correlation between predictions and the target, computed within
+# each exped (Pearson on ranks is Spearman). A quick proxy for FIT, not FIT
+# itself: FIT is a covariance, which everestapi.scoring.fit20 computes.
 print("\nEvaluating on the embargoed holdout...")
 
 holdout_df = holdout_df.dropna(subset=[target_col]).copy()
 holdout_df["prediction"] = model.predict(features_matrix(holdout_df, feat_cols))
-fit = holdout_df.groupby(EXPED_COL)[["prediction", target_col]].apply(
+corr = holdout_df.groupby(EXPED_COL)[["prediction", target_col]].apply(
     lambda g: g["prediction"].rank().corr(g[target_col].rank())
 ).dropna()
-print(f"  Mean FIT:     {fit.mean():+.4f}")
-print(f"  Std FIT:      {fit.std():.4f}")
-print(f"  % Positive:    {(fit > 0).mean():.1%}")
-print(f"  Sharpe (FIT): {fit.mean() / fit.std():.2f}")
+print(f"  Mean Spearman:     {corr.mean():+.4f}")
+print(f"  Std Spearman:      {corr.std():.4f}")
+print(f"  % Positive:        {(corr > 0).mean():.1%}")
+print(f"  Sharpe (Spearman): {corr.mean() / corr.std():.2f}")
 # This model never saw the embargo or the holdout. That is the price of an
 # honest score. To submit a model fit on all of history, refit on the whole of
 # train once you are happy with this one.
