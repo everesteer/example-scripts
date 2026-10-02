@@ -42,7 +42,6 @@ import pickle
 import cloudpickle
 import pandas as pd
 from everestapi import EverestAPI
-from scipy.stats import norm
 
 client = EverestAPI(
     api_key=os.environ["EIQ_API_KEY"],
@@ -177,27 +176,19 @@ print(f"Artifact: {type(fitted).__qualname__} "
 # =====================================================================
 # 5. Score it on the holdout, here
 # =====================================================================
-# FIT is a rank covariance, computed within each exped: rank the predictions,
-# map the ranks to a standard normal, and take the covariance with the
-# mean-centred target. It is not a correlation, so it is not bounded by 1.
-def exped_fit(g, pred_col):
-    if len(g) < 3 or g[pred_col].std() == 0:
-        return 0.0
-    ranks = (g[pred_col].rank(method="average") - 0.5) / len(g)
-    z = norm.ppf(ranks.clip(0.001, 0.999))
-    t = (g[TARGET] - g[TARGET].mean()).to_numpy()
-    return float((z - z.mean()) @ t) / len(g)
-
-
-def per_exped_fit(frame, pred_col):
-    return frame.groupby(EXPED)[[pred_col, TARGET]].apply(exped_fit, pred_col=pred_col)
+# Spearman rank correlation between predictions and the target, computed within
+# each exped (Pearson on ranks is Spearman). A quick proxy for FIT, not FIT
+# itself: FIT is a covariance (rank-gaussianized predictions with the centred target).
+def per_exped_corr(frame, pred_col):
+    return frame.groupby(EXPED)[[pred_col, TARGET]].apply(
+        lambda g: g[pred_col].rank().corr(g[TARGET].rank())
+    ).dropna()
 
 
 holdout = holdout.assign(prediction=score(holdout))
-fit_by_exped = per_exped_fit(holdout, "prediction")
-print(f"Holdout FIT {fit_by_exped.mean():+.4f} | std {fit_by_exped.std():.4f} | "
-      f"sharpe {fit_by_exped.mean() / fit_by_exped.std():.2f} | "
-      f"{(fit_by_exped > 0).mean():.0%} of expeds positive")
+corr = per_exped_corr(holdout, "prediction")
+print(f"Holdout Spearman {corr.mean():+.4f} | std {corr.std():.4f} | "
+      f"sharpe {corr.mean() / corr.std():.2f} | {(corr > 0).mean():.0%} of expeds positive")
 
 # UNQ is measured against this benchmark model, so it is the bar to beat. Score
 # it on the same rows, the same way, so the comparison is like-for-like. A row is the
@@ -215,7 +206,7 @@ try:
               "rows match on id and exped, so the benchmark was built from a different "
               "train file than the one served now.")
     else:
-        print(f"Benchmark    {per_exped_fit(rows, 'benchmark').mean():+.4f} "
+        print(f"Benchmark    {per_exped_corr(rows, 'benchmark').mean():+.4f} "
               f"on {len(rows):,} of {len(holdout):,} holdout rows")
 except Exception as exc:  # noqa: BLE001, a comparison is useful but not required
     print(f"Benchmark comparison unavailable: {exc}")

@@ -38,10 +38,10 @@ internal platform repo to call into.
     (Step 2), not the whole of it. Report it **two ways**: full-period FIT and a
     recent-window FIT (most recent ~20-40 expeds).
   - **UNQ**: the same covariance after the benchmark model's direction is removed from your
-    predictions; a paid component. Report `contribution()` from
-    **`eiq-model-implementation`** (UNQ's own calculation, against the downloaded benchmark,
-    the same series the server uses) for every config, labeled as measured on your holdout,
-    and the server's number where rounds have resolved.
+    predictions; a paid component. Report the offline `contribution()` proxy from
+    **`eiq-model-implementation`** (it residualizes against the downloaded benchmark, the
+    same series the server uses) for every config, labeled as a proxy, and the server's
+    number where rounds have resolved.
   - **INOV**: UNQ's calculation with the equal-weight average of a frozen core feature set,
     whose membership is not published, in place of the benchmark. Report it where rounds
     have resolved; you cannot reproduce it exactly offline without the core set. Report a

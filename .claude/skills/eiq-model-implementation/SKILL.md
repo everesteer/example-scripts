@@ -266,7 +266,7 @@ assert isinstance(p, pd.Series) and len(p) == len(sub)
 assert p.index.equals(sub.index) and not p.isna().any()
 ```
 
-**Step 2. Sanity-bound the FIT.** Compute the per-exped FIT (a rank covariance) against the target on a
+**Step 2. Sanity-bound the FIT.** Compute the per-exped Spearman correlation, a quick proxy for FIT, against the target on a
 *held-out* split, never the rows you trained on. That is not the downloadable `validation` split:
 it ships without targets and is scored server-side on the practice board. Carve an embargoed tail
 off the labeled `train` split instead, the same way `himalayas/02_train_and_submit.ipynb` does:
@@ -284,27 +284,13 @@ holdout = train[train["exped"].isin(holdout_expeds)].dropna(subset=[TARGET])
 m = MyEverestModel().fit(fit_rows[feats], fit_rows[TARGET])
 holdout = holdout.assign(prediction=m.predict(holdout[feats]))
 
-# FIT is a rank covariance, computed within each exped: rank the predictions, map the
-# ranks to a standard normal, and take the covariance with the mean-centred target. It is
-# not a correlation, so it is not bounded by 1. Don't use EverestAPI.evaluate for this: it
-# returns a correlation pooled over every row, which is not FIT.
-from scipy.stats import norm
-
-def gaussianize(s):
-    """Average ranks scaled into (0, 1), clipped, then the inverse normal CDF."""
-    r = (s.rank(method="average") - 0.5) / len(s)
-    return norm.ppf(r.clip(0.001, 0.999))
-
-def exped_fit(g, pred_col="prediction", target_col=TARGET):
-    if len(g) < 3 or g[pred_col].std() == 0:
-        return 0.0
-    z = gaussianize(g[pred_col])
-    t = (g[target_col] - g[target_col].mean()).to_numpy()
-    return float((z - z.mean()) @ t) / len(g)
-
-fit_by_exped = holdout.groupby("exped")[["prediction", TARGET]].apply(exped_fit)
-print(f"FIT {fit_by_exped.mean():+.4f} | std {fit_by_exped.std():.4f} | "
-      f"{(fit_by_exped > 0).mean():.0%} of expeds positive")
+# Per-exped Spearman, then averaged: a quick proxy for FIT (FIT itself is a rank
+# covariance with the centred target). Don't use EverestAPI.evaluate for this: it pools every row
+# into one correlation, which is not a per-exped number like the one the board scores.
+corr = holdout.groupby("exped")[["prediction", TARGET]].apply(
+    lambda g: g["prediction"].rank().corr(g[TARGET].rank())
+).dropna()
+print(f"Spearman {corr.mean():+.4f} | std {corr.std():.4f} | {(corr > 0).mean():.0%} of expeds positive")
 ```
 
 A healthy futures model usually lands at a **small positive** FIT, on the order of a few
@@ -346,15 +332,12 @@ arrive after 20 days, when the target is realised.
 **UNQ is measured against a benchmark you can download, so the offline proxy is a real one.**
 `explain_scoring`'s `metrics.unq` reports it as your contribution over the benchmark model's
 predictions, and `download_benchmark("futures", "train")` serves those predictions on the split
-your holdout comes from. UNQ is FIT's covariance taken after the benchmark's direction is removed:
-per exped, rank-gaussianize your predictions and the benchmark's, project the benchmark out of
-yours, and take the covariance of what is left with the mean-centred target. On an exped where
-the benchmark itself lost (its own FIT is negative), UNQ is 0. `contribution()` below is that
-calculation on your holdout. The server's number is the same calculation on the scored window,
-so it still comes back only after the round resolves, but it is not an unobservable.
+your holdout comes from. Residualize your predictions against the benchmark per exped, then
+correlate the residual with the target. Treat it as a proxy still: UNQ itself is a covariance,
+and the real number comes back after the round resolves. But it is not an unobservable.
 
 ```python
-from scipy.stats import norm   # plus pandas as pd, numpy as np
+from scipy.stats import spearmanr   # plus pandas as pd, numpy as np
 # EXPED and PRIMARY_TARGET come from get_dataset_schema() - read them, don't hardcode.
 
 # The reference to measure against: the mean of the benchmark models over `train`.
@@ -375,27 +358,16 @@ def neutralize(preds, neutralizers, proportion=1.0):
     projection = X @ (np.linalg.pinv(X, rcond=1e-6) @ y)
     return pd.Series((y - proportion * projection).ravel(), index=preds.index)
 
-def gaussianize(s):
-    """Average ranks scaled into (0, 1), clipped, then the inverse normal CDF (as in Step 2)."""
-    r = (s.rank(method="average") - 0.5) / len(s)
-    return norm.ppf(r.clip(0.001, 0.999))
-
 def contribution(df, pred_col, target_col=PRIMARY_TARGET, bench_col="benchmark"):
-    """UNQ per exped: the covariance of your rank-gaussianized predictions, with the
-    benchmark's direction removed, against the mean-centred target. 0 on an exped where the
-    benchmark itself lost."""
+    """UNQ proxy, per exped: residualize against the benchmark, correlate with the target."""
     out = {}
     for e, g in df.groupby(EXPED):
-        g = g[g[bench_col].notna() & g[target_col].notna()]
-        if len(g) < 5:
+        g = g[g[bench_col].notna()]   # an all-NaN exped hands pinv a NaN matrix and raises
+        if len(g) < 3:
             continue
-        p, m = gaussianize(g[pred_col]), gaussianize(g[bench_col])
-        t = (g[target_col] - g[target_col].mean()).to_numpy()
-        if (m - m.mean()) @ t < 0:   # the benchmark lost on this exped
-            out[e] = 0.0
-            continue
-        ortho = p - m * (m @ p) / (m @ m)
-        out[e] = float(t @ ortho) / len(g)
+        rho, _ = spearmanr(neutralize(g[pred_col], g[[bench_col]]), g[target_col])
+        if np.isfinite(rho):
+            out[e] = rho
     return pd.Series(out)
 ```
 
@@ -406,8 +378,8 @@ was built from a different train file than the one served now (ids that exist in
 different expeds). Either way, don't read `contribution()` until the share is back near 1, because
 the rows it does score are a biased few.
 
-Neutralization is **cross-sectional**, so `neutralize` is applied per exped: against the benchmark
-or a feature block, for the fixes below.
+Neutralization is **cross-sectional**, so `neutralize` is applied per exped in both uses: against
+the benchmark for the proxy above, and against a feature block for the exposure fix below.
 
 - **Residualize the target against the benchmark.** Train on the residual of the graded target
   after projecting out the benchmark series, so the model can only learn what the benchmark

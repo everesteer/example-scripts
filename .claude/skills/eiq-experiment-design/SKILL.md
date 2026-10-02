@@ -66,10 +66,11 @@ for may not describe this panel the way they would a named-instrument universe.
     selection score, not the whole of it (see the checklist below).
   - **UNQ**: the same covariance after the **benchmark model's** direction is removed from
     your predictions (`explain_scoring`'s `metrics.unq` is the authority); 0 on an exped where
-    the benchmark itself lost. That benchmark is downloadable over `train`, so you can compute
-    UNQ itself on your holdout. **`eiq-model-implementation`** carries that as a
-    `contribution()` helper you can lift. It is measured on your holdout, not the scored
-    window; the server's number arrives after the round resolves.
+    the benchmark itself lost. That benchmark is downloadable over `train`, so the offline
+    proxy is a real one: residualize your predictions against the downloaded benchmark per
+    exped, then correlate the residual with the target. **`eiq-model-implementation`**
+    carries that as a `contribution()` helper you can lift. Label it as a proxy; the
+    server's number arrives after the round resolves.
   - **INOV**: UNQ's calculation with the equal-weight average of a **frozen core feature
     set** in place of the benchmark. The schema's `core_feature_overlap` tells you how many of
     those core features fall inside each published feature set; the membership is
