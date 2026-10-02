@@ -237,19 +237,19 @@ model.fit(features_matrix(fit_df, feat_cols), fit_df[target_col])
 # =====================================================================
 # 6. Evaluate on the embargoed holdout
 # =====================================================================
-# CORR is the rank correlation between predictions and the target, computed
+# FIT is the rank correlation between predictions and the target, computed
 # within each exped. Pearson on ranks is Spearman.
 print("\nEvaluating on the embargoed holdout...")
 
 holdout_df = holdout_df.dropna(subset=[target_col]).copy()
 holdout_df["prediction"] = model.predict(features_matrix(holdout_df, feat_cols))
-corr = holdout_df.groupby(EXPED_COL)[["prediction", target_col]].apply(
+fit = holdout_df.groupby(EXPED_COL)[["prediction", target_col]].apply(
     lambda g: g["prediction"].rank().corr(g[target_col].rank())
 ).dropna()
-print(f"  Mean CORR:     {corr.mean():+.4f}")
-print(f"  Std CORR:      {corr.std():.4f}")
-print(f"  % Positive:    {(corr > 0).mean():.1%}")
-print(f"  Sharpe (CORR): {corr.mean() / corr.std():.2f}")
+print(f"  Mean FIT:     {fit.mean():+.4f}")
+print(f"  Std FIT:      {fit.std():.4f}")
+print(f"  % Positive:    {(fit > 0).mean():.1%}")
+print(f"  Sharpe (FIT): {fit.mean() / fit.std():.2f}")
 # This model never saw the embargo or the holdout. That is the price of an
 # honest score. To submit a model fit on all of history, refit on the whole of
 # train once you are happy with this one.
@@ -380,5 +380,5 @@ print("\nNext:")
 print("  client.get_leaderboard():            the round board")
 print("  client.get_scores(...):              your scores once the round resolves")
 print("  client.get_validation_diagnostics(): the practice board result")
-print("\nScores rank on a weighted blend of CORR, AIMC and NCORR. Call explain_scoring")
+print("\nScores rank on a weighted blend of FIT, UNQ and INOV. Call explain_scoring")
 print("for the live weights and do not assume which term dominates.")
