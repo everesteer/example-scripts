@@ -41,9 +41,11 @@ machine/cron/systemd.
   about 20 days after the round.
 - Score is a weighted blend of FIT, UNQ and INOV. Call `explain_scoring` for the live
   weights; they are a live setting and have changed before, so do not assume which term
-  leads. UNQ is measured against a **benchmark model** (`download_benchmark("futures",
-  split)` serves its predictions), and INOV is correlation after neutralizing against a fixed
-  core feature set. Re-expressing the benchmark scores poorly on both.
+  leads. All three are covariances with the mean-centred target: FIT on your rank-gaussianized
+  predictions, UNQ after removing the direction of a **benchmark model**
+  (`download_benchmark("futures", split)` serves its predictions), and INOV after removing the
+  direction of the equal-weight average of a fixed core feature set. Re-expressing the
+  benchmark scores poorly on both.
 - That score is then scaled by a per-round **payout factor**, frozen when the round's stake
   locks, and the return is **capped**: a round pays back at most **A times the stake**, with A
   the platform's `payout_cap`. `explain_scoring` reports both.

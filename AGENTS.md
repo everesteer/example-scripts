@@ -199,12 +199,16 @@ before, and no document, this one included, can tell you which term leads. Optim
 score rather than any single term: a model tuned on one leaves the rest untouched. Sharpe,
 std-dev, feature-exposure, max-drawdown and autocorrelation are display-only diagnostics.
 
-What the terms mean: **FIT** is rank correlation between your predictions and the realised
-forward return. **UNQ** is your contribution measured against a **benchmark model**:
-predictions that merely re-express the benchmark earn nothing. The benchmark is a series you can
-download and measure against offline (`download_benchmark("futures", "train")`), and
-`explain_scoring`'s `metrics.unq` is the authority on it. **INOV** is your neutralized
-correlation, measured after projecting out a fixed core feature set; the schema's
+What the terms mean: all three are **covariances** with the mean-centred target, computed per
+exped, so none of them is bounded by 1. **FIT** is a rank covariance: your predictions are
+ranked and mapped to a standard normal, and FIT is their covariance with the realised forward
+return. **UNQ** is the same covariance after the **benchmark model's** direction is removed from
+your predictions, so predictions that merely re-express the benchmark earn nothing; it is 0 on an
+exped where the benchmark itself lost. The benchmark is a series you can download and measure
+against offline (`download_benchmark("futures", "train")`), and `explain_scoring`'s
+`metrics.unq` is the authority on it. **INOV** is the same again with the equal-weight average of
+a fixed core feature set in place of the benchmark, so it pays for signal beyond what those
+features already carry; the schema's
 `core_feature_overlap` reports how many of those core features land inside each published
 feature set, and the membership is deliberately not published. `INOV` is the name every runtime
 surface uses: the API, the MCP tools and the leaderboards.

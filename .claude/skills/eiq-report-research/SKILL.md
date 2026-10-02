@@ -31,20 +31,21 @@ internal platform repo to call into.
   to round, and the return is capped at **A times the stake** (A is the platform's
   `payout_cap`). Stake returns arrive after 20 days, when the target is realised.
 - Always report these:
-  - **FIT**: mean per-exped rank correlation of your predictions vs the target; also a
-    scored term (see `explain_scoring` for the live weights), and the one number you can
-    compute most precisely offline; one input to the selection score (Step 2), not the
-    whole of it. Report it **two ways**: full-period FIT and a recent-window
-    FIT (most recent ~20-40 expeds).
-  - **UNQ**: your contribution over the benchmark model's predictions; a paid component.
-    Report the offline `contribution()` proxy from **`eiq-model-implementation`** (it
-    residualizes against the downloaded benchmark, the same series the server uses) for
-    every config, labeled as a proxy, and the server's number where rounds have resolved.
-  - **INOV**: correlation after neutralizing against a frozen core feature set whose
-    membership is not published. Report it where rounds have resolved; note that the
-    platform runs it on **rank-gaussianized** predictions and neutralizes with a
-    spectrally-anchored ridge, so a local OLS residualization on raw predictions will not
-    reproduce it. Report a resolved INOV of `null` as null, never as zero: it means the
+  - **FIT**: mean per-exped rank covariance of your predictions with the target (ranked,
+    mapped to a standard normal, then the covariance with the mean-centred target, so it is
+    not bounded by 1); also a scored term (see `explain_scoring` for the live weights), and
+    the one number you can compute most precisely offline; one input to the selection score
+    (Step 2), not the whole of it. Report it **two ways**: full-period FIT and a
+    recent-window FIT (most recent ~20-40 expeds).
+  - **UNQ**: the same covariance after the benchmark model's direction is removed from your
+    predictions; a paid component. Report `contribution()` from
+    **`eiq-model-implementation`** (UNQ's own calculation, against the downloaded benchmark,
+    the same series the server uses) for every config, labeled as measured on your holdout,
+    and the server's number where rounds have resolved.
+  - **INOV**: UNQ's calculation with the equal-weight average of a frozen core feature set,
+    whose membership is not published, in place of the benchmark. Report it where rounds
+    have resolved; you cannot reproduce it exactly offline without the core set. Report a
+    resolved INOV of `null` as null, never as zero: it means the
     core features were absent from the scored frame, which leaves that round without a
     round score.
   - **correlation-with-benchmark**: corr of your preds with the benchmark series. This is

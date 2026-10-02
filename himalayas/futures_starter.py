@@ -46,6 +46,7 @@ import cloudpickle
 import lightgbm as lgb
 import pandas as pd
 from everestapi import EverestAPI
+from scipy.stats import norm
 
 client = EverestAPI(
     api_key=os.environ["EIQ_API_KEY"],
@@ -237,20 +238,28 @@ model.fit(features_matrix(fit_df, feat_cols), fit_df[target_col])
 # =====================================================================
 # 6. Evaluate on the embargoed holdout
 # =====================================================================
-# Spearman rank correlation between predictions and the target, computed within
-# each exped (Pearson on ranks is Spearman). A quick proxy for FIT, not FIT
-# itself: FIT is a covariance, which everestapi.scoring.fit20 computes.
+# FIT is a rank covariance, computed within each exped: rank the predictions,
+# map the ranks to a standard normal, and take the covariance with the
+# mean-centred target. It is not a correlation, so it is not bounded by 1.
 print("\nEvaluating on the embargoed holdout...")
+
+
+def exped_fit(g):
+    if len(g) < 3 or g["prediction"].std() == 0:
+        return 0.0
+    ranks = (g["prediction"].rank(method="average") - 0.5) / len(g)
+    z = norm.ppf(ranks.clip(0.001, 0.999))
+    t = (g[target_col] - g[target_col].mean()).to_numpy()
+    return float((z - z.mean()) @ t) / len(g)
+
 
 holdout_df = holdout_df.dropna(subset=[target_col]).copy()
 holdout_df["prediction"] = model.predict(features_matrix(holdout_df, feat_cols))
-corr = holdout_df.groupby(EXPED_COL)[["prediction", target_col]].apply(
-    lambda g: g["prediction"].rank().corr(g[target_col].rank())
-).dropna()
-print(f"  Mean Spearman:     {corr.mean():+.4f}")
-print(f"  Std Spearman:      {corr.std():.4f}")
-print(f"  % Positive:        {(corr > 0).mean():.1%}")
-print(f"  Sharpe (Spearman): {corr.mean() / corr.std():.2f}")
+fit_by_exped = holdout_df.groupby(EXPED_COL)[["prediction", target_col]].apply(exped_fit)
+print(f"  Mean FIT:     {fit_by_exped.mean():+.4f}")
+print(f"  Std FIT:      {fit_by_exped.std():.4f}")
+print(f"  % Positive:   {(fit_by_exped > 0).mean():.1%}")
+print(f"  Sharpe (FIT): {fit_by_exped.mean() / fit_by_exped.std():.2f}")
 # This model never saw the embargo or the holdout. That is the price of an
 # honest score. To submit a model fit on all of history, refit on the whole of
 # train once you are happy with this one.

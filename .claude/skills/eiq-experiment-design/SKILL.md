@@ -58,27 +58,26 @@ for may not describe this panel the way they would a named-instrument universe.
   because your holdout is carved out of `train`.
 - **Metrics** (call `explain_scoring` for the live weights and definitions; it is the
   authority, this file is not):
-  - **FIT**: per-exped rank correlation of your predictions vs the graded target. A
+  All three are covariances with the mean-centred target, computed per exped on your
+  **rank-gaussianized** predictions (ranked, then mapped to a standard normal), so none is
+  bounded by 1.
+  - **FIT**: per-exped rank covariance of your predictions with the graded target. A
     scored term, and the one you can measure most precisely offline. One input to your
     selection score, not the whole of it (see the checklist below).
-  - **UNQ**: AI Model Contribution, your contribution over a **benchmark model's
-    predictions** (`explain_scoring`'s `metrics.unq` is the authority). That benchmark is
-    downloadable over `train`, so the offline proxy is a real one: residualize your
-    predictions against the downloaded benchmark per exped, then correlate the residual
-    with the target. **`eiq-model-implementation`** carries that as a `contribution()`
-    helper you can lift. Label it as a proxy; the server's number arrives after the round
-    resolves.
-  - **INOV**: correlation after neutralizing against a **frozen core feature set**. The
-    schema's `core_feature_overlap` tells you how many of those core features fall inside
-    each published feature set; the membership is deliberately not published. A high
-    overlap is not an escape route: it means the core features already sit inside the ones
-    you trained on. Two things before you try to reproduce the number offline. It runs on
-    your **rank-gaussianized** predictions, not your raw ones, and the platform neutralizes
-    with a spectrally-anchored ridge rather than exact OLS (today's core set is
-    rank-deficient, which keeps the ridge branch active), so an exact residualization will
-    not match it. INOV is **null** when none of the core features are present on the
-    scored frame, and a null term means no round score at all: those entries rank below
-    every scored one.
+  - **UNQ**: the same covariance after the **benchmark model's** direction is removed from
+    your predictions (`explain_scoring`'s `metrics.unq` is the authority); 0 on an exped where
+    the benchmark itself lost. That benchmark is downloadable over `train`, so you can compute
+    UNQ itself on your holdout. **`eiq-model-implementation`** carries that as a
+    `contribution()` helper you can lift. It is measured on your holdout, not the scored
+    window; the server's number arrives after the round resolves.
+  - **INOV**: UNQ's calculation with the equal-weight average of a **frozen core feature
+    set** in place of the benchmark. The schema's `core_feature_overlap` tells you how many of
+    those core features fall inside each published feature set; the membership is
+    deliberately not published, so you cannot reproduce INOV exactly offline. A high overlap
+    is not an escape route: it means the core features already sit inside the ones you
+    trained on. INOV is **null** when none of the core features are present on the scored
+    frame, and a null term means no round score at all: those entries rank below every
+    scored one.
   - Always sanity-check **correlation-with-benchmark**: a config with high FIT but
     correlation-with-benchmark near 1.0 is re-expressing the benchmark and is unlikely to
     earn UNQ once the round resolves.

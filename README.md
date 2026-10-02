@@ -288,12 +288,16 @@ reference. Never submit it: its ids match nothing.
 Each round is scored on a weighted blend of FIT, UNQ and INOV, measured out-of-sample on the
 graded column.
 
-- **FIT** is rank correlation against the realised forward return.
-- **UNQ** is your contribution over a **benchmark model**, so predictions that merely
-  re-express the benchmark earn nothing. You can download the benchmark and measure against it
-  offline: `download_benchmark("futures", "train")`.
-- **INOV** is your correlation after a fixed core feature set is projected out, so alpha that
-  survives feature exposure counts for more.
+All three are covariances with the mean-centred target, computed per exped, so none of them is
+bounded by 1.
+
+- **FIT** is a rank covariance: your predictions are ranked, mapped to a standard normal, and
+  FIT is their covariance with the realised forward return.
+- **UNQ** is the same covariance after a **benchmark model's** direction is removed from your
+  predictions, so predictions that merely re-express the benchmark earn nothing. You can
+  download the benchmark and measure against it offline: `download_benchmark("futures", "train")`.
+- **INOV** is the same again with the equal-weight average of a fixed core feature set in place
+  of the benchmark, so signal beyond what those features carry counts for more.
 
 Call `explain_scoring` for the live weights. They are platform settings and they have changed
 before, so no document, this one included, can tell you which term leads. Optimise the round
