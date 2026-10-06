@@ -10,7 +10,7 @@ human-readable account of the day is in the [README](README.md#the-daily-round).
 
 > **In a hackathon event?** This repo is the tournament starter kit and its instructions do not
 > apply to your key. Go to
-> [everestquant/hackathon-example-scripts](https://github.com/everestquant/hackathon-example-scripts).
+> [everesteer/hackathon-example-scripts](https://github.com/everesteer/hackathon-example-scripts).
 
 ## Setup
 
