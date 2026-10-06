@@ -5,7 +5,7 @@ scripts, notebooks, and the agent contract in [`AGENTS.md`](AGENTS.md).
 
 > **In a hackathon event?** This repo is the tournament starter kit and its instructions do not
 > apply to your key. Go to
-> [everestquant/hackathon-example-scripts](https://github.com/everestquant/hackathon-example-scripts).
+> [everesteer/hackathon-example-scripts](https://github.com/everesteer/hackathon-example-scripts).
 
 ## Set up auto-submit
 
@@ -97,7 +97,7 @@ Send `validation` rows here, never `live` ones: the two are disjoint `id` namesp
    | [`01_explore_the_data.ipynb`](himalayas/01_explore_the_data.ipynb) | 5 min | Expeds, binned features, missing values, the target family |
    | [`02_train_and_submit.ipynb`](himalayas/02_train_and_submit.ipynb) | 10 min | A baseline, honestly evaluated, set up on auto-submit and on the historical leaderboard |
 
-   [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/everestquant/example-scripts/blob/main/himalayas/hello_everesteer.ipynb)
+   [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/everesteer/example-scripts/blob/main/himalayas/hello_everesteer.ipynb)
 
 ## The toolkit
 
