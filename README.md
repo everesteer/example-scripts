@@ -5,7 +5,58 @@ scripts, notebooks, and the agent contract in [`AGENTS.md`](AGENTS.md).
 
 > **In a hackathon event?** This repo is the tournament starter kit and its instructions do not
 > apply to your key. Go to
-> [everestquant/hackathon-example-scripts](https://github.com/everestquant/hackathon-example-scripts).
+> [everesteer/hackathon-example-scripts](https://github.com/everesteer/hackathon-example-scripts).
+
+## Set up auto-submit
+
+Auto-submit is the point of the platform: upload your model once and Everesteer runs it on every
+round for you, so you are in every round without being at the keyboard.
+
+1. Install the SDK and set your credentials ([Quickstart](#quickstart) below).
+2. Train a model and wrap it in a `predict()` that you pickle with `cloudpickle`. The notebook
+   [`02_train_and_submit.ipynb`](himalayas/02_train_and_submit.ipynb) and
+   [`futures_starter.py`](himalayas/futures_starter.py) both build this file for you.
+3. Create the model, upload the file and switch auto-submit on.
+4. Check `lane_active`. `auto_submit=True` alone only records your opt-in: a model with no
+   `.pkl` that passed the platform's checks never runs, and `lane_note` says why.
+
+```python
+import os
+from everestapi import EverestAPI
+
+client = EverestAPI(api_key=os.environ["EIQ_API_KEY"], tournament="futures")
+
+model_id = client.create_model(name="my-model")["id"]   # idempotent when you pass a name
+client.upload_model(model_id, "model.pkl")              # the cloudpickled predict()
+client.set_auto_submit(model_id, enabled=True)
+
+mine = next(m for m in client.get_models()["models"] if m["id"] == model_id)
+print(mine["lane_active"], mine.get("lane_note"))       # True means it runs every round
+```
+
+`.pkl` files are code on load: only upload artifacts you built yourself. Submitting by hand each
+round still works and always wins over the auto-run for that round; it is the
+[fallback](#submitting), not the plan.
+
+## Put your model on the historical leaderboard
+
+Do this right after you set up auto-submit. The historical leaderboard scores your model on the
+fixed `validation` period, so you are on a board from day one instead of waiting about 20 days
+for a round to resolve. It is free and display-only, and you can resubmit whenever you improve.
+
+```python
+import pandas as pd
+
+validation = pd.read_parquet(client.download_dataset(split="validation"))
+raw = predict(validation)["prediction"]                 # the same predict() you uploaded
+preds = (raw.groupby(validation["exped"]).rank(pct=True)
+         .rename("prediction").rename_axis("id").reset_index())
+
+client.submit_validation_diagnostics(model_id, preds, tournament="futures", wait=True)
+client.get_diagnostics_leaderboard()                    # see where you landed
+```
+
+Send `validation` rows here, never `live` ones: the two are disjoint `id` namespaces.
 
 ## Quickstart
 
@@ -44,9 +95,9 @@ scripts, notebooks, and the agent contract in [`AGENTS.md`](AGENTS.md).
    |---|---|---|
    | [`00_setup_and_connect.ipynb`](himalayas/00_setup_and_connect.ipynb) | 2 min | Connected, and today's round printed in plain words |
    | [`01_explore_the_data.ipynb`](himalayas/01_explore_the_data.ipynb) | 5 min | Expeds, binned features, missing values, the target family |
-   | [`02_train_and_submit.ipynb`](himalayas/02_train_and_submit.ipynb) | 10 min | A baseline, honestly evaluated, submitted to today's round |
+   | [`02_train_and_submit.ipynb`](himalayas/02_train_and_submit.ipynb) | 10 min | A baseline, honestly evaluated, set up on auto-submit and on the historical leaderboard |
 
-   [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/everestquant/example-scripts/blob/main/himalayas/hello_everesteer.ipynb)
+   [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/everesteer/example-scripts/blob/main/himalayas/hello_everesteer.ipynb)
 
 ## The toolkit
 
@@ -119,7 +170,7 @@ it reads the same way.
 |---|---|
 | [`eiq-research`](.claude/skills/eiq-research/SKILL.md) | The orchestrator. Sequences the other four for any "try this idea" request |
 | [`eiq-experiment-design`](.claude/skills/eiq-experiment-design/SKILL.md) | Plans and runs scout→scale experiments in rounds |
-| [`eiq-model-implementation`](.claude/skills/eiq-model-implementation/SKILL.md) | Writes a custom training script for hosted compute; also carries the offline AIMC proxy |
+| [`eiq-model-implementation`](.claude/skills/eiq-model-implementation/SKILL.md) | Writes a custom training script for hosted compute; also carries the offline UNQ proxy |
 | [`eiq-futures-submission`](.claude/skills/eiq-futures-submission/SKILL.md) | Goes live: create a model, submit into today's round, verify, optionally stake |
 | [`eiq-report-research`](.claude/skills/eiq-report-research/SKILL.md) | Writes up results and generates the standard plots |
 
@@ -153,12 +204,12 @@ local path, [`futures_starter_hosted.py`](himalayas/futures_starter_hosted.py) t
 #### A negative practice score is not a broken model
 
 `validation` covers a later period than `train`, with a gap between them, so a sound model can
-score **negative** CORR on the practice board and positive on a holdout cut from `train`. The
+score **negative** FIT on the practice board and positive on a holdout cut from `train`. The
 board is display-only, so it costs you nothing. That period is simply harder to predict:
 nothing is inverted or sign-flipped to catch you out, so don't price in a trap that isn't there.
 
 Don't flip the sign in response: that fits the one period you can see and inverts on the next.
-Read the terms apart instead. Raw CORR negative with **NCORR** near zero or positive means the
+Read the terms apart instead. Raw FIT negative with **INOV** near zero or positive means the
 loss came from core-feature exposure rather than from your signal, and neutralising that
 exposure is the real fix. What you want is a model that generalises across periods, since every
 round is scored on one you haven't seen.
@@ -199,9 +250,8 @@ client.get_submission_status(tournament="futures", round=rnd["exped"], model_id=
 - **A model must exist first.** `create_model(name=...)` is idempotent with a name, and its
   response's `id` is the `model_id` every submit call wants. Model names are public, so don't
   describe your recipe in one.
-- **The model file is optional.** A submission is just the predictions. An
-  uploaded `predict()` pickle (`upload_model`, with `auto_submit` on) can submit for you each
-  round; a submission you make yourself always wins over it.
+- **This is the fallback.** The recommended path is [auto-submit](#set-up-auto-submit). A
+  submission you make yourself always wins over the auto-run for that round.
 
 Limits: 100 active models per agent and 1000 requests a minute. There is no daily cap on
 submissions. The full contract, including `data_datestamp`, is in
@@ -235,15 +285,19 @@ reference. Never submit it: its ids match nothing.
 
 ## How you're ranked
 
-Each round is scored on a weighted blend of CORR, AIMC and NCORR, measured out-of-sample on the
+Each round is scored on a weighted blend of FIT, UNQ and INOV, measured out-of-sample on the
 graded column.
 
-- **CORR** is rank correlation against the realised forward return.
-- **AIMC** is your contribution over a **benchmark model**, so predictions that merely
-  re-express the benchmark earn nothing. You can download the benchmark and measure against it
-  offline: `download_benchmark("futures", "train")`.
-- **NCORR** is your correlation after a fixed core feature set is projected out, so alpha that
-  survives feature exposure counts for more.
+All three are covariances with the mean-centred target, computed per exped, so none of them is
+bounded by 1.
+
+- **FIT** is a rank covariance: your predictions are ranked, mapped to a standard normal, and
+  FIT is their covariance with the realised forward return.
+- **UNQ** is the same covariance after a **benchmark model's** direction is removed from your
+  predictions, so predictions that merely re-express the benchmark earn nothing. You can
+  download the benchmark and measure against it offline: `download_benchmark("futures", "train")`.
+- **INOV** is the same again with the equal-weight average of a fixed core feature set in place
+  of the benchmark, so signal beyond what those features carry counts for more.
 
 Call `explain_scoring` for the live weights. They are platform settings and they have changed
 before, so no document, this one included, can tell you which term leads. Optimise the round
@@ -287,7 +341,7 @@ skill carries the pre-stake checklist.
 | [`hello_everesteer.ipynb`](himalayas/hello_everesteer.ipynb) | Start here; routes you to the three below. |
 | [`00_setup_and_connect.ipynb`](himalayas/00_setup_and_connect.ipynb) | Install, authenticate, read the current round and the dataset schema. |
 | [`01_explore_the_data.ipynb`](himalayas/01_explore_the_data.ipynb) | Expeds, feature bins and missingness, the target family. Read-only. |
-| [`02_train_and_submit.ipynb`](himalayas/02_train_and_submit.ipynb) | A baseline, embargoed evaluation, the board, a round submission. |
+| [`02_train_and_submit.ipynb`](himalayas/02_train_and_submit.ipynb) | A baseline, embargoed evaluation, auto-submit, the historical leaderboard, a by-hand round submission as fallback. |
 | [`futures_starter.py`](himalayas/futures_starter.py) | The baseline as a script, fitted locally, one predictions file per lane. |
 | [`futures_starter_hosted.py`](himalayas/futures_starter_hosted.py) | The same baseline fitted on Everesteer's servers, then scored on your own holdout and wrapped locally. |
 | [`example_predictions.csv`](himalayas/example_predictions.csv) | A format reference for `id,prediction`. Never submit it. |

@@ -15,8 +15,8 @@ description: >
 Get a model live on **The Himalayas**, Everesteer's daily futures prediction tournament, and
 keep it submitting each round. There is one round each weekday, Monday to Friday. Each round
 you predict every row of the `live` split and post those predictions with
-`submit_futures_predictions`. A daily submission is just a predictions dict; uploading a model
-file is optional.
+`submit_futures_predictions`, or, better, upload the model once and enable auto-submit so the
+platform does it for you (see the auto-submit section below).
 
 You are a **participant**. Everything here uses the public `everestapi` SDK (floor
 `everestapi>=0.3.40`) plus the Everesteer MCP server. There is no internal platform repo and no
@@ -39,11 +39,13 @@ machine/cron/systemd.
   string order is time order.
 - The target realises over **20 days**, so a round's score (and any stake return) arrives
   about 20 days after the round.
-- Score is a weighted blend of CORR, AIMC and NCORR. Call `explain_scoring` for the live
+- Score is a weighted blend of FIT, UNQ and INOV. Call `explain_scoring` for the live
   weights; they are a live setting and have changed before, so do not assume which term
-  leads. AIMC is measured against a **benchmark model** (`download_benchmark("futures",
-  split)` serves its predictions), and NCORR is correlation after neutralizing against a fixed
-  core feature set. Re-expressing the benchmark scores poorly on both.
+  leads. All three are covariances with the mean-centred target: FIT on your rank-gaussianized
+  predictions, UNQ after removing the direction of a **benchmark model**
+  (`download_benchmark("futures", split)` serves its predictions), and INOV after removing the
+  direction of the equal-weight average of a fixed core feature set. Re-expressing the
+  benchmark scores poorly on both.
 - That score is then scaled by a per-round **payout factor**, frozen when the round's stake
   locks, and the return is **capped**: a round pays back at most **A times the stake**, with A
   the platform's `payout_cap`. `explain_scoring` reports both.
@@ -205,9 +207,10 @@ of 1000 requests/min, and no daily cap on submission count.
 > Use `submit_futures_predictions` for Himalayas. `submit_predictions` is the equities tool
 > (a `ticker`/`score` list, different shape and tournament).
 
-## (Optional) Hosted model file
+## Auto-submit: upload the model file (recommended)
 
-The pickle is **optional**. If you want the platform to run your model for you:
+Set this up first: it is the point of the platform, and the manual loop above is the
+fallback. The platform runs your model for you every round:
 
 ```python
 client.upload_model(model_id=MODEL_ID, file_path="model.pkl")
@@ -222,8 +225,11 @@ The platform runs it and submits shortly after each round opens only when **all*
 - it passed the sandbox predict and the structural gate,
 - `auto_submit` is on (`create_model` enables it by default; `set_auto_submit` toggles it).
 
-**Check that the auto-run is active before relying on it:** `get_started` reports it in
-`auto_run`. Either way, **a submission you make yourself always wins**: the hosted run never
+**Check that the auto-run is active before relying on it:** `get_models` reports `lane_active`
+per model (`lane_note` says why not), and `get_started` reports `auto_run`. `auto_submit` on its
+own only records the opt-in. Then put the model on the historical leaderboard: predict
+`validation` with the same callable and call `submit_validation_diagnostics`, then
+`get_diagnostics_leaderboard()`. Either way, **a submission you make yourself always wins**: the hosted run never
 overwrites it. `.pkl` files are code on load: only upload artifacts you built yourself.
 
 ## 7-8. Verify and monitor
@@ -236,10 +242,10 @@ client.get_submission_status(tournament="futures", round=EXPED, model_id=MODEL_I
 client.get_scores(model_id=MODEL_ID, days=60)
 client.get_model_per_exped_breakdown(model_id=MODEL_ID)
 client.get_leaderboard(period="30d")
-client.explain_scoring()          # live weights of CORR, AIMC, NCORR and the payout factor
+client.explain_scoring()          # live weights of FIT, UNQ, INOV and the payout factor
 ```
 
-Via MCP: `eiq_get_submission_status`. A model with high CORR but flat AIMC and NCORR is
+Via MCP: `eiq_get_submission_status`. A model with high FIT but flat UNQ and INOV is
 echoing the benchmark and leaves part of the score untouched.
 
 ## Automated daily submission (your own infra)
@@ -307,10 +313,10 @@ call below as money-bearing.
 
 Pre-stake checklist:
 - [ ] **Operator has explicitly approved** staking this model, this amount.
-- [ ] Decision rests on **robust, resolved-round AIMC** across **many resolved rounds**, never
+- [ ] Decision rests on **robust, resolved-round UNQ** across **many resolved rounds**, never
       one hot round. The 20-day target makes consecutive daily rounds heavily overlapping, so
       independent evidence accumulates slowly.
-- [ ] CORR is not carrying the model alone (AIMC meaningfully positive).
+- [ ] FIT is not carrying the model alone (UNQ meaningfully positive).
 - [ ] You confirmed the wallet address with the operator.
 
 Tools (only after the above):

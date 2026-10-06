@@ -18,8 +18,8 @@ to the practice board if not.
 
 It produces:
   - baseline_predictions.parquet (+ .csv): id + prediction for the scored split
-  - baseline_model.pkl:          the model as a cloudpickled predict(). OPTIONAL:
-                                  a daily submission is just the predictions
+  - baseline_model.pkl:          the model as a cloudpickled predict(). Upload it
+                                  and enable auto-submit (section 8)
 
 Usage:
     pip install "everestapi>=0.3.40" lightgbm scikit-learn pandas pyarrow cloudpickle
@@ -237,8 +237,9 @@ model.fit(features_matrix(fit_df, feat_cols), fit_df[target_col])
 # =====================================================================
 # 6. Evaluate on the embargoed holdout
 # =====================================================================
-# CORR is the rank correlation between predictions and the target, computed
-# within each exped. Pearson on ranks is Spearman.
+# Spearman rank correlation between predictions and the target, computed within
+# each exped (Pearson on ranks is Spearman). A quick proxy for FIT, not FIT
+# itself: FIT is a covariance (rank-gaussianized predictions with the centred target).
 print("\nEvaluating on the embargoed holdout...")
 
 holdout_df = holdout_df.dropna(subset=[target_col]).copy()
@@ -246,10 +247,10 @@ holdout_df["prediction"] = model.predict(features_matrix(holdout_df, feat_cols))
 corr = holdout_df.groupby(EXPED_COL)[["prediction", target_col]].apply(
     lambda g: g["prediction"].rank().corr(g[target_col].rank())
 ).dropna()
-print(f"  Mean CORR:     {corr.mean():+.4f}")
-print(f"  Std CORR:      {corr.std():.4f}")
-print(f"  % Positive:    {(corr > 0).mean():.1%}")
-print(f"  Sharpe (CORR): {corr.mean() / corr.std():.2f}")
+print(f"  Mean Spearman:     {corr.mean():+.4f}")
+print(f"  Std Spearman:      {corr.std():.4f}")
+print(f"  % Positive:        {(corr > 0).mean():.1%}")
+print(f"  Sharpe (Spearman): {corr.mean() / corr.std():.2f}")
 # This model never saw the embargo or the holdout. That is the price of an
 # honest score. To submit a model fit on all of history, refit on the whole of
 # train once you are happy with this one.
@@ -281,15 +282,14 @@ print(f"\nPredicted {len(predictions):,} rows; first id: {predictions.index[0]!r
 
 
 # =====================================================================
-# 8. Pickle the model (OPTIONAL)
+# 8. Pickle the model, for auto-submit
 # =====================================================================
-# A daily submission is just the predictions. The pickle only matters if you
-# want the platform to predict for you: upload_model(model_id, path) with a
+# Auto-submit is the recommended path: upload_model(model_id, path) with a
 # cloudpickled predict(live_features) that passes the sandbox predict and the
 # structural gate, with auto_submit on (create_model turns it on by default),
 # and the platform runs it and submits shortly after each round opens. Check
-# get_started's auto_run field to confirm the hosted run is active; a submission
-# you make yourself always wins over it.
+# get_models' lane_active field (and lane_note) to confirm the hosted run is active;
+# a submission you make yourself always wins over it.
 #
 # If you do upload one: return a SINGLE-COLUMN DataFrame indexed by id with
 # every value in [0, 1], use cloudpickle.dump (never pickle.dump), and select
@@ -381,5 +381,5 @@ print("\nNext:")
 print("  client.get_leaderboard():            the round board")
 print("  client.get_scores(...):              your scores once the round resolves")
 print("  client.get_validation_diagnostics(): the practice board result")
-print("\nScores rank on a weighted blend of CORR, AIMC and NCORR. Call explain_scoring")
+print("\nScores rank on a weighted blend of FIT, UNQ and INOV. Call explain_scoring")
 print("for the live weights and do not assume which term dominates.")
