@@ -22,7 +22,7 @@ It produces:
                                   and enable auto-submit (section 8)
 
 Usage:
-    pip install "everestapi>=0.3.40" lightgbm scikit-learn pandas pyarrow cloudpickle
+    pip install "everesteer-api>=0.4.1" lightgbm scikit-learn pandas pyarrow cloudpickle
     export EIQ_API_KEY="..."               # from onboarding
     export EIQ_BASE_URL="https://api.everesteer.ai"
     python himalayas/futures_starter.py

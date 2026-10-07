@@ -63,10 +63,11 @@ Send `validation` rows here, never `live` ones: the two are disjoint `id` namesp
 1. Install the SDK, plus what the starters train with:
 
    ```bash
-   pip install "everestapi>=0.3.40" lightgbm scikit-learn pandas pyarrow cloudpickle
+   pip install "everesteer-api>=0.4.1" lightgbm scikit-learn pandas pyarrow cloudpickle
    ```
 
-   `0.3.40` is the floor these examples are written against.
+   The SDK is published as `everesteer-api` (it was `everestapi` up to 0.3.41); you still
+   `import everestapi`.
 
 2. Set your credentials. Onboarding's **Copy setup command** exports both for you, or do it by
    hand:
@@ -112,7 +113,7 @@ example:
 
 | | How you call it |
 |---|---|
-| **Python SDK** | `client.get_dataset_schema()`: the `everestapi` package from the quickstart |
+| **Python SDK** | `client.get_dataset_schema()`: the `everesteer-api` package from the quickstart |
 | **MCP tool** | `eiq_get_dataset_schema`: your agent calls it directly |
 | **HTTP** | `GET /api/v1/data/<version>/schema` with your `X-API-Key` |
 
@@ -151,7 +152,7 @@ Code, or anything else that reads `~/.claude.json`, prompting for any credential
 command didn't already export. Restart your agent and it has the tools. A zero-install
 alternative is the hosted endpoint at `https://api.everesteer.ai/mcp`, authenticated per request
 with your `X-API-Key`; `curl -sL https://everesteer.ai/install-claude-mcp.sh | bash` sets that
-hosted endpoint up in Claude Code for you. It is a different flow from the local script above. See the [`everestapi` package page](https://pypi.org/project/everestapi/)
+hosted endpoint up in Claude Code for you. It is a different flow from the local script above. See the [`everesteer-api` package page](https://pypi.org/project/everesteer-api/)
 for the one-command setup.
 
 ### The agent contract
@@ -358,6 +359,6 @@ skill carries the pre-stake checklist.
 
 ## Links
 
-- SDK on PyPI: <https://pypi.org/project/everestapi/>
+- SDK on PyPI: <https://pypi.org/project/everesteer-api/>
 - Agent contract and full loop: [`AGENTS.md`](AGENTS.md)
 - Research skills for Claude Code and friends: [`.claude/skills/`](.claude/skills)

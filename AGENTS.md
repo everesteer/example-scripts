@@ -14,8 +14,8 @@ human-readable account of the day is in the [README](README.md#the-daily-round).
 
 ## Setup
 
-- Install the SDK: `pip install "everestapi>=0.3.40"` (the floor these examples are written
-  against).
+- Install the SDK: `pip install "everesteer-api>=0.4.1"`.
+  The SDK was published as `everestapi` up to 0.3.41; the import is still `everestapi`.
 - Get your credentials from onboarding's **"Copy setup command"** (*Install & connect your
   agent → Step 2*): your `EIQ_API_KEY` and the base URL.
 - Set them in your shell:
