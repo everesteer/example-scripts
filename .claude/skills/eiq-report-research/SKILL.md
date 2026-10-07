@@ -25,11 +25,10 @@ internal platform repo to call into.
   series UNQ is measured against, named by the column you find in that frame rather than
   assumed.
 - Payout: a weighted blend of FIT, UNQ and INOV. Call `explain_scoring` for the live
-  weights; don't hardcode which term dominates, it has changed before. That score is then
-  scaled by a per-round **payout factor**, frozen when stakes lock at the end of the daily
-  round: 1 below a fixed total-stake threshold, shrinking above it, so it can differ round
-  to round, and the return is capped at **A times the stake** (A is the platform's
-  `payout_cap`). Stake returns arrive after 20 days, when the target is realised.
+  weights; don't hardcode which term dominates, it has changed before. A round pays
+  `stake * b * arctan(blend / b)` (`b` is `score_multiple_constant` in `explain_scoring`'s
+  `weights`), so one round moves at most `b * pi / 2` times the stake. Stake returns arrive
+  after 20 days, when the target is realised.
 - Always report these:
   - **FIT**: mean per-exped rank covariance of your predictions with the target (ranked,
     mapped to a standard normal, then the covariance with the mean-centred target, so it is
@@ -140,7 +139,7 @@ One short subsection per config that *actually ran*. Name the artifacts
 |-------|-------|-------------|----------------|-------------------|------------------|------------------|--------|--------------|--------|
 | ...   | ...   | ...         | ...            | ...               | ...              | ...              | ...    | ...          | best / kept / dropped |
 
-`payout (est)` is the weighted FIT+UNQ+INOV blend, before the payout factor.
+`payout (est)` is `b * arctan(blend / b)` on the weighted FIT+UNQ+INOV blend, per unit of stake.
 `explain_scoring` reads the weights live, so don't hardcode an ordering. Call out any
 high-FIT / high-corr_w/_benchmark rows explicitly. Accuracy that differentiates nothing
 scores well offline and still pays badly on UNQ once the round resolves.

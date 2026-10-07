@@ -212,12 +212,10 @@ non-overfit FIT). Then invoke
   proxy - the server's number arrives after the round resolves.
 - **The round score is a weighted blend of FIT, UNQ and INOV. Call `explain_scoring`
   for the live weights.** Don't hardcode an ordering; it has changed before. Keep the
-  search pointed at differentiated alpha rather than at chasing FIT alone. That score is
-  then scaled by a per-round **payout factor**, frozen when stakes lock at the end of the
-  daily round: 1 below a fixed total-stake threshold, shrinking above it, so it can differ
-  round to round, and the return is capped at **A times the stake** (A is the platform's
-  `payout_cap` from `explain_scoring`). Stake returns arrive after 20 days, when the target
-  is realised.
+  search pointed at differentiated alpha rather than at chasing FIT alone. A round pays
+  `stake * b * arctan(blend / b)` (`b` is `score_multiple_constant` in `explain_scoring`'s
+  `weights`), so one round moves at most `b * pi / 2` times the stake. Stake returns arrive
+  after 20 days, when the target is realised.
 - **Scout before you scale.** Always a downsampled-exped round first; full data only for
   survivors.
 - **Iterate in rounds and stop at a plateau.** ~4-5 configs per round; two flat rounds

@@ -323,11 +323,9 @@ weights; don't hardcode which term dominates. All three are covariances with the
 target. **UNQ** is that covariance after the benchmark model's direction is removed from your
 rank-gaussianized predictions, and **INOV** is the same with the equal-weight average of a fixed
 core feature set in place of the benchmark; on both, a merely-accurate model that re-expresses what the benchmark already says
-pays little. That score is then scaled by a per-round **payout factor**: frozen when stakes lock at
-the end of the daily round, it is 1 below a fixed total-stake threshold and shrinks as the round's
-total locked stake grows past it, so it can differ round to round. The return is capped at **A
-times the stake**, with A the platform's `payout_cap` from `explain_scoring`. Stake returns
-arrive after 20 days, when the target is realised.
+pays little. A round pays `stake * b * arctan(blend / b)`, with `b` the `score_multiple_constant`
+in `explain_scoring`'s `weights`; the arctan is the only bound, so one round moves at most
+`b * pi / 2` times the stake. Stake returns arrive after 20 days, when the target is realised.
 
 **UNQ is measured against a benchmark you can download, so the offline proxy is a real one.**
 `explain_scoring`'s `metrics.unq` reports it as your contribution over the benchmark model's
