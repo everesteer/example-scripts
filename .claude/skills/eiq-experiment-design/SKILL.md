@@ -83,12 +83,11 @@ for may not describe this panel the way they would a named-instrument universe.
     correlation-with-benchmark near 1.0 is re-expressing the benchmark and is unlikely to
     earn UNQ once the round resolves.
 - **The round score is a weighted blend of FIT, UNQ and INOV. Call `explain_scoring`
-  for the live weights.** Don't hardcode which term dominates; it has changed before. That
-  score is then scaled by a per-round **payout factor**, frozen when stakes lock at the end
-  of the daily round: 1 below a fixed total-stake threshold, shrinking above it, so it can
-  differ round to round. The return is capped at **A times the stake**, with A the
-  platform's `payout_cap` from `explain_scoring`. Stake returns arrive after 20 days, when the
-  target is realised.
+  for the live weights.** Don't hardcode which term dominates; it has changed before. A
+  round pays `stake * b * arctan(blend / b)`, with `b` the `score_multiple_constant` in
+  `explain_scoring`'s `weights`. The arctan is the only bound: one round moves at most
+  `b * pi / 2` times the stake, and there is no payout factor. Stake returns arrive after
+  20 days, when the target is realised.
 
 ## The loop in one breath
 

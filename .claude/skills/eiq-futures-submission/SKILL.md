@@ -46,9 +46,9 @@ machine/cron/systemd.
   (`download_benchmark("futures", split)` serves its predictions), and INOV after removing the
   direction of the equal-weight average of a fixed core feature set. Re-expressing the
   benchmark scores poorly on both.
-- That score is then scaled by a per-round **payout factor**, frozen when the round's stake
-  locks, and the return is **capped**: a round pays back at most **A times the stake**, with A
-  the platform's `payout_cap`. `explain_scoring` reports both.
+- A round pays `stake * b * arctan(blend / b)`, where the blend is that weighted sum and `b`
+  is the `score_multiple_constant` in `explain_scoring`'s `weights`. The arctan is the only
+  bound: one round moves at most `b * pi / 2` times the stake. There is no payout factor.
 
 ## Which lane to submit down
 
@@ -242,7 +242,7 @@ client.get_submission_status(tournament="futures", round=EXPED, model_id=MODEL_I
 client.get_scores(model_id=MODEL_ID, days=60)
 client.get_model_per_exped_breakdown(model_id=MODEL_ID)
 client.get_leaderboard(period="30d")
-client.explain_scoring()          # live weights of FIT, UNQ, INOV and the payout factor
+client.explain_scoring()          # live weights of FIT, UNQ, INOV and b
 ```
 
 Via MCP: `eiq_get_submission_status`. A model with high FIT but flat UNQ and INOV is
@@ -305,11 +305,12 @@ call below as money-bearing.
 
 - Stakes **lock at the end of the daily round**.
 - Returns arrive **after 20 days**, when the target is realised.
-- The return comes from the scoring formula (the round's score scaled by its payout factor)
-  and is **capped at A times the stake**, with A the platform's `payout_cap`. Call
-  `explain_scoring` for the live terms and estimate with
-  `everestapi.scoring.payout(..., payout_cap=...)` before committing real value: a
-  proportional estimate is optimistic exactly where a large stake is decided.
+- The return comes from the scoring formula, `stake * b * arctan(blend / b)`, so one round
+  moves at most `b * pi / 2` times the stake. Read the live weights and `b`
+  (`weights.score_multiple_constant`) from `explain_scoring` and estimate with
+  `everestapi.scoring.payout(fit, unq, inov=inov, stake=stake, score_multiple_constant=b)`
+  before committing real value: a proportional estimate is optimistic exactly where a large
+  stake is decided.
 
 Pre-stake checklist:
 - [ ] **Operator has explicitly approved** staking this model, this amount.

@@ -312,13 +312,12 @@ do not affect rank.
 
 You can stake USDC on your models. A round's stake **locks when that day's round closes**, and
 the return arrives **about 20 days later**, when the target has realised and the round scores.
-The return comes from the scoring formula, scaled by a per-round **payout factor**: frozen when
-the round's stake locks, it is 1 while the round's total locked stake stays under a fixed
-threshold and shrinks as more stake piles into that round, so the same score can pay out
-differently from one round to the next. The return is also **capped**: a round can pay back at
-most **A times your stake**, where A is a platform setting (`payout_cap` in `explain_scoring`).
-To estimate a payout, use `everestapi.scoring.payout(..., payout_cap=...)` with the live values
-rather than stake times score.
+The return comes from the scoring formula, `stake * b * arctan(blend / b)`, where the blend is
+the weighted FIT+UNQ+INOV score and `b` is the `score_multiple_constant` in `explain_scoring`'s
+`weights`. The arctan is the only bound: a round can pay back at most `b * pi / 2` times your
+stake, and there is no payout factor. To estimate a payout, use
+`everestapi.scoring.payout(..., score_multiple_constant=b)` with the live values rather than
+stake times score.
 
 | Call | What it does |
 |---|---|

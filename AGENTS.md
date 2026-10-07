@@ -176,10 +176,11 @@ yourself always wins over the hosted run.
 
 Models can be staked. A round's stake **locks at the end of that day's round**, and the return
 arrives **about 20 days later**, when the target has realised. The return comes from the scoring
-formula, and it is **capped**: a round can return at most **A times your stake**, where A is a
-platform setting (`payout_cap` in `explain_scoring`, which also carries the per-round payout
-factor). Size a stake with `everestapi.scoring.payout(..., payout_cap=...)` rather than a
-proportional guess: a large score does not pay proportionally once it hits the cap. The calls:
+formula, `stake * b * arctan(blend / b)`, and the arctan **bounds** it: a round moves at most
+`b * pi / 2` times your stake, with `b` the `score_multiple_constant` in `explain_scoring`'s
+`weights`. Size a stake with `everestapi.scoring.payout(..., score_multiple_constant=b)` rather
+than a proportional guess: a large score does not pay proportionally once the arctan flattens.
+The calls:
 `get_deposit_address()`, `stake(model_id, amount_usdc, wallet_address)`,
 `get_stake_balance(model_id)`, `get_staking_history(model_id)`, `unstake(stake_id)` and
 `claim_payout(model_id, round_id)`. Staking is real money: an agent never stakes without the
@@ -213,11 +214,9 @@ features already carry; the schema's
 feature set, and the membership is deliberately not published. `INOV` is the name every runtime
 surface uses: the API, the MCP tools and the leaderboards.
 
-On top of that score, payout is scaled by a per-round **payout factor**: frozen when the round's
-stake locks, it is 1 below a fixed total-stake threshold and shrinks as the round's total locked
-stake grows past it, so it can differ round to round. The result is then **capped**: a round
-returns at most **A times your stake**, with A the platform's `payout_cap`, read live from
-`explain_scoring`.
+On top of that score, payout is `stake * b * arctan(blend / b)`, with `b` the
+`score_multiple_constant` in `explain_scoring`'s `weights`. The arctan is the only bound: a round
+returns at most `b * pi / 2` times your stake. There is no payout factor.
 
 ## Choosing where to train
 
